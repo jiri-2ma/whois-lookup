@@ -2,6 +2,8 @@
   "use strict";
 
   var RDAP_BASE = "https://rdap.org";
+  var DNS_BASE = "https://cloudflare-dns.com/dns-query";
+  var GEO_BASE = "https://ipapi.co";
   var COOLDOWN_MS = 2500;
   var lastLookupTime = 0;
 
@@ -13,6 +15,8 @@
   var errorEl = document.getElementById("error");
   var resultsEl = document.getElementById("results");
   var summaryList = document.getElementById("summary-list");
+  var dnsCard = document.getElementById("dns-card");
+  var dnsList = document.getElementById("dns-list");
   var rawToggle = document.getElementById("raw-toggle");
   var rawJson = document.getElementById("raw-json");
 
@@ -47,7 +51,9 @@
     hide(errorEl);
     hide(resultsEl);
     hide(rateLimitMsg);
+    hide(dnsCard);
     summaryList.innerHTML = "";
+    dnsList.innerHTML = "";
     rawJson.textContent = "";
     rawToggle.setAttribute("aria-expanded", "false");
     hide(rawJson);
@@ -214,6 +220,79 @@
     }
   }
 
+  // --- DNS resolution ---
+
+  function resolveDNS(domain) {
+    // Fetch A and AAAA records in parallel
+    var aQuery = fetch(DNS_BASE + "?name=" + encodeURIComponent(domain) + "&type=A", {
+      headers: { Accept: "application/dns-json" },
+    }).then(function (r) { return r.ok ? r.json() : { Answer: [] }; })
+      .catch(function () { return { Answer: [] }; });
+
+    var aaaaQuery = fetch(DNS_BASE + "?name=" + encodeURIComponent(domain) + "&type=AAAA", {
+      headers: { Accept: "application/dns-json" },
+    }).then(function (r) { return r.ok ? r.json() : { Answer: [] }; })
+      .catch(function () { return { Answer: [] }; });
+
+    return Promise.all([aQuery, aaaaQuery]).then(function (results) {
+      var ips = [];
+      results.forEach(function (res) {
+        if (res.Answer) {
+          res.Answer.forEach(function (ans) {
+            // Type 1 = A, Type 28 = AAAA
+            if ((ans.type === 1 || ans.type === 28) && ans.data) {
+              ips.push(ans.data);
+            }
+          });
+        }
+      });
+      return ips;
+    });
+  }
+
+  // --- Geolocation ---
+
+  function geolocateIP(ip) {
+    return fetch(GEO_BASE + "/" + encodeURIComponent(ip) + "/json/")
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .catch(function () { return null; });
+  }
+
+  function renderIPCard(ips, geoResults) {
+    dnsList.innerHTML = "";
+    if (ips.length === 0) return;
+
+    show(dnsCard);
+
+    ips.forEach(function (ip, idx) {
+      var row = document.createElement("div");
+      row.className = "ip-row";
+
+      var ipEl = document.createElement("span");
+      ipEl.className = "ip-address";
+      ipEl.textContent = ip;
+      row.appendChild(ipEl);
+
+      var geo = geoResults[idx];
+      if (geo && !geo.error) {
+        var parts = [];
+        if (geo.city) parts.push(geo.city);
+        if (geo.region) parts.push(geo.region);
+        if (geo.country_name) parts.push(geo.country_name);
+        if (geo.org) parts.push(geo.org);
+
+        if (parts.length > 0) {
+          var locEl = document.createElement("span");
+          locEl.className = "ip-location";
+          locEl.textContent = parts.join(", ");
+          row.appendChild(locEl);
+        }
+      }
+
+      dnsList.appendChild(row);
+    });
+  }
+
   // --- Lookup ---
 
   function doLookup(query) {
@@ -255,6 +334,24 @@
         renderSummary(fields);
         rawJson.textContent = JSON.stringify(data, null, 2);
         show(resultsEl);
+
+        // For domains: resolve IPs and geolocate
+        var isDomain = !isIP(query);
+        var ipsToGeolocate = isDomain ? null : [query];
+
+        if (isDomain) {
+          resolveDNS(query).then(function (ips) {
+            if (ips.length === 0) return;
+            return Promise.all(ips.map(geolocateIP)).then(function (geoResults) {
+              renderIPCard(ips, geoResults);
+            });
+          });
+        } else {
+          // For direct IP lookups, geolocate the queried IP
+          geolocateIP(query).then(function (geo) {
+            if (geo) renderIPCard([query], [geo]);
+          });
+        }
       })
       .catch(function (err) {
         hide(loadingEl);
@@ -300,5 +397,7 @@
     findEvent: findEvent,
     formatDate: formatDate,
     parseDomainResponse: parseDomainResponse,
+    resolveDNS: resolveDNS,
+    geolocateIP: geolocateIP,
   };
 })();

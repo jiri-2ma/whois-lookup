@@ -20,6 +20,6 @@ pages:
         X-Frame-Options: DENY
         X-Content-Type-Options: nosniff
         Referrer-Policy: strict-origin-when-cross-origin
-        Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; connect-src https://rdap.org; img-src 'self'; font-src 'self'
+        Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; connect-src https://rdap.org https://cloudflare-dns.com https://ipapi.co; img-src 'self'; font-src 'self'
         Permissions-Policy: camera=(), microphone=(), geolocation=()
       EOF
