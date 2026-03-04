@@ -59,6 +59,18 @@ h1 {
   font-size: 0.95rem;
 }
 
+/* Explainer */
+.explainer {
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.explainer p + p {
+  margin-top: 0.5rem;
+}
+
 /* Input */
 .input-group {
   display: flex;
