@@ -415,14 +415,9 @@
   // --- URL query parameter support ---
 
   function getBasePath() {
-    // Detect base path from <base> or known deployment path
-    // On GitLab Pages: /whois-lookup/, locally: /
-    var path = window.location.pathname;
-    // Find the last known segment of the app path
-    var idx = path.indexOf("/whois-lookup/");
-    if (idx !== -1) return path.substring(0, idx + "/whois-lookup/".length);
-    // Local dev or root deployment
-    return "/";
+    // Use the <base> tag href if present, otherwise "/"
+    var baseEl = document.querySelector("base");
+    return baseEl ? baseEl.getAttribute("href") : "/";
   }
 
   function getQueryFromURL() {
