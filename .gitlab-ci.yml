@@ -6,21 +6,17 @@ pages:
     - cp index.html public/404.html
     - cp -r css public/
     - cp -r js public/
-  artifacts:
-    paths:
-      - public
-    expire_in: 30 days
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-
-  # Security headers via _headers file
-  after_script:
     - |
-      cat > public/_headers <<'EOF'
+      cat > public/_headers <<'HEADERS'
       /*
         X-Frame-Options: DENY
         X-Content-Type-Options: nosniff
         Referrer-Policy: strict-origin-when-cross-origin
         Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; connect-src https://rdap.org https://cloudflare-dns.com https://ipapi.co; img-src 'self'; font-src 'self'
         Permissions-Policy: camera=(), microphone=(), geolocation=()
-      EOF
+      HEADERS
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
