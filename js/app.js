@@ -306,6 +306,7 @@
     resetUI();
     show(loadingEl);
     btn.disabled = true;
+    updateURL(query);
 
     var endpoint;
     if (isIP(query)) {
@@ -377,6 +378,30 @@
     input.value = query;
     doLookup(query);
   });
+
+  // --- URL query parameter support ---
+
+  function getQueryFromURL() {
+    var params = new URLSearchParams(window.location.search);
+    return params.get("q") || "";
+  }
+
+  function updateURL(query) {
+    var url = new URL(window.location);
+    if (query) {
+      url.searchParams.set("q", query);
+    } else {
+      url.searchParams.delete("q");
+    }
+    history.replaceState(null, "", url);
+  }
+
+  var initialQuery = getQueryFromURL();
+  if (initialQuery) {
+    var cleaned = cleanDomain(initialQuery);
+    input.value = cleaned;
+    doLookup(cleaned);
+  }
 
   rawToggle.addEventListener("click", function () {
     var expanded = rawToggle.getAttribute("aria-expanded") === "true";
