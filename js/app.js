@@ -381,19 +381,31 @@
 
   // --- URL query parameter support ---
 
+  function getBasePath() {
+    // Detect base path from <base> or known deployment path
+    // On GitLab Pages: /whois-lookup/, locally: /
+    var path = window.location.pathname;
+    // Find the last known segment of the app path
+    var idx = path.indexOf("/whois-lookup/");
+    if (idx !== -1) return path.substring(0, idx + "/whois-lookup/".length);
+    // Local dev or root deployment
+    return "/";
+  }
+
   function getQueryFromURL() {
-    var params = new URLSearchParams(window.location.search);
-    return params.get("q") || "";
+    var base = getBasePath();
+    var path = decodeURIComponent(window.location.pathname);
+    var query = path.substring(base.length).replace(/^\/+/, "").replace(/\/+$/, "");
+    return query;
   }
 
   function updateURL(query) {
-    var url = new URL(window.location);
+    var base = getBasePath();
     if (query) {
-      url.searchParams.set("q", query);
+      history.replaceState(null, "", base + query);
     } else {
-      url.searchParams.delete("q");
+      history.replaceState(null, "", base);
     }
-    history.replaceState(null, "", url);
   }
 
   var initialQuery = getQueryFromURL();
