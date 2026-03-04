@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WHOIS Lookup</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <h1>WHOIS Lookup</h1>
+    <p class="subtitle">Domain &amp; IP registration data via RDAP</p>
+
+    <form id="lookup-form" autocomplete="off">
+      <div class="input-group">
+        <input
+          type="text"
+          id="query-input"
+          placeholder="Enter domain or IP (e.g. google.com, 8.8.8.8)"
+          autofocus
+          spellcheck="false"
+        >
+        <button type="submit" id="lookup-btn">Lookup</button>
+      </div>
+      <p id="rate-limit-msg" class="rate-limit hidden">Please wait a moment between lookups.</p>
+    </form>
+
+    <div id="loading" class="hidden">
+      <div class="spinner"></div>
+      <span>Querying RDAP&hellip;</span>
+    </div>
+
+    <div id="error" class="hidden"></div>
+
+    <div id="results" class="hidden">
+      <section id="summary-card" class="card">
+        <h2>Summary</h2>
+        <dl id="summary-list"></dl>
+      </section>
+
+      <section class="card">
+        <h2>
+          <button id="raw-toggle" type="button" aria-expanded="false">
+            Raw RDAP Response <span class="toggle-icon">&#9654;</span>
+          </button>
+        </h2>
+        <pre id="raw-json" class="hidden"></pre>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

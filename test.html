@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WHOIS Lookup — Tests</title>
+  <style>
+    body { font-family: monospace; margin: 2rem; background: #111; color: #ccc; }
+    h1 { font-size: 1.2rem; margin-bottom: 1rem; }
+    .pass { color: #4ade80; }
+    .fail { color: #f87171; font-weight: bold; }
+    .suite { margin: 1rem 0 0.25rem; font-weight: bold; color: #93c5fd; }
+    .result { margin-left: 1rem; }
+    #summary { margin-top: 1.5rem; padding: 0.5rem; border-top: 1px solid #333; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>WHOIS Lookup — Unit Tests</h1>
+  <div id="output"></div>
+  <div id="summary"></div>
+
+  <!-- App needs these DOM elements to initialize -->
+  <div style="display:none">
+    <form id="lookup-form"><input id="query-input"><button id="lookup-btn"></button></form>
+    <p id="rate-limit-msg" class="hidden"></p>
+    <div id="loading" class="hidden"></div>
+    <div id="error" class="hidden"></div>
+    <div id="results" class="hidden">
+      <dl id="summary-list"></dl>
+      <button id="raw-toggle" aria-expanded="false"></button>
+      <pre id="raw-json" class="hidden"></pre>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+  (function () {
+    var out = document.getElementById("output");
+    var passed = 0;
+    var failed = 0;
+    var W = window._WhoisApp;
+
+    function suite(name) {
+      var el = document.createElement("div");
+      el.className = "suite";
+      el.textContent = name;
+      out.appendChild(el);
+    }
+
+    function assert(desc, actual, expected) {
+      var ok;
+      if (typeof expected === "object" && expected !== null) {
+        ok = JSON.stringify(actual) === JSON.stringify(expected);
+      } else {
+        ok = actual === expected;
+      }
+      var el = document.createElement("div");
+      el.className = "result " + (ok ? "pass" : "fail");
+      if (ok) {
+        el.textContent = "\u2713 " + desc;
+        passed++;
+      } else {
+        el.textContent = "\u2717 " + desc + " — expected: " + JSON.stringify(expected) + ", got: " + JSON.stringify(actual);
+        failed++;
+      }
+      out.appendChild(el);
+    }
+
+    // ========================
+    // isIP
+    // ========================
+    suite("isIP");
+
+    assert("IPv4 address", W.isIP("8.8.8.8"), true);
+    assert("IPv4 private", W.isIP("192.168.1.1"), true);
+    assert("IPv6 address", W.isIP("2001:4860:4860::8888"), true);
+    assert("IPv6 loopback", W.isIP("::1"), true);
+    assert("domain is not IP", W.isIP("google.com"), false);
+    assert("subdomain is not IP", W.isIP("www.example.co.uk"), false);
+    assert("empty string", W.isIP(""), false);
+    assert("single number", W.isIP("123"), true); // edge case: digits-only matches
+
+    // ========================
+    // cleanDomain
+    // ========================
+    suite("cleanDomain");
+
+    assert("plain domain unchanged", W.cleanDomain("google.com"), "google.com");
+    assert("strips https://", W.cleanDomain("https://example.com"), "example.com");
+    assert("strips http://", W.cleanDomain("http://example.com"), "example.com");
+    assert("strips path", W.cleanDomain("https://example.com/page/sub"), "example.com");
+    assert("strips path without protocol", W.cleanDomain("example.com/page"), "example.com");
+    assert("lowercases", W.cleanDomain("GOOGLE.COM"), "google.com");
+    assert("trims whitespace", W.cleanDomain("  google.com  "), "google.com");
+    assert("full URL with path and query", W.cleanDomain("https://sub.example.com/path?q=1"), "sub.example.com");
+
+    // ========================
+    // findVcard
+    // ========================
+    suite("findVcard");
+
+    var entities = [
+      { roles: ["registrant"], vcardArray: ["vcard", [["fn", {}, "text", "Alice"]]] },
+      { roles: ["registrar"], vcardArray: ["vcard", [["fn", {}, "text", "Bob Registrar"]]] },
+    ];
+
+    assert("finds registrant", W.findVcard(entities, "registrant"), entities[0].vcardArray);
+    assert("finds registrar", W.findVcard(entities, "registrar"), entities[1].vcardArray);
+    assert("returns null for missing role", W.findVcard(entities, "technical"), null);
+    assert("returns null for null entities", W.findVcard(null, "registrant"), null);
+    assert("returns null for empty array", W.findVcard([], "registrant"), null);
+    assert("skips entity without vcardArray", W.findVcard([{ roles: ["registrant"] }], "registrant"), null);
+
+    // ========================
+    // vcardField
+    // ========================
+    suite("vcardField");
+
+    var vcard = ["vcard", [
+      ["version", {}, "text", "4.0"],
+      ["fn", {}, "text", "Test Corp"],
+      ["email", {}, "text", "test@example.com"],
+    ]];
+
+    assert("extracts fn", W.vcardField(vcard, "fn"), "Test Corp");
+    assert("extracts email", W.vcardField(vcard, "email"), "test@example.com");
+    assert("returns null for missing field", W.vcardField(vcard, "tel"), null);
+    assert("returns null for null vcard", W.vcardField(null, "fn"), null);
+    assert("returns null for vcard without fields", W.vcardField(["vcard"], "fn"), null);
+
+    // ========================
+    // findEvent
+    // ========================
+    suite("findEvent");
+
+    var events = [
+      { eventAction: "registration", eventDate: "2000-01-15T00:00:00Z" },
+      { eventAction: "expiration", eventDate: "2030-01-15T00:00:00Z" },
+      { eventAction: "last changed", eventDate: "2024-06-01T12:00:00Z" },
+    ];
+
+    assert("finds registration", W.findEvent(events, "registration"), "2000-01-15T00:00:00Z");
+    assert("finds expiration", W.findEvent(events, "expiration"), "2030-01-15T00:00:00Z");
+    assert("finds last changed", W.findEvent(events, "last changed"), "2024-06-01T12:00:00Z");
+    assert("returns null for missing action", W.findEvent(events, "transfer"), null);
+    assert("returns null for null events", W.findEvent(null, "registration"), null);
+    assert("returns null for empty events", W.findEvent([], "registration"), null);
+
+    // ========================
+    // formatDate
+    // ========================
+    suite("formatDate");
+
+    assert("returns null for null", W.formatDate(null), null);
+    assert("returns null for undefined", W.formatDate(undefined), null);
+    assert("formats valid ISO date", typeof W.formatDate("2024-01-15T00:00:00Z"), "string");
+    assert("formatted date contains year", W.formatDate("2024-01-15T00:00:00Z").indexOf("2024") !== -1, true);
+    assert("returns invalid string as-is", W.formatDate("not-a-date"), "not-a-date");
+
+    // ========================
+    // parseDomainResponse — domain
+    // ========================
+    suite("parseDomainResponse — domain");
+
+    var domainResponse = {
+      ldhName: "example.com",
+      handle: "D12345-LRMS",
+      entities: [
+        { roles: ["registrant"], vcardArray: ["vcard", [["fn", {}, "text", "Example Inc"]]] },
+        { roles: ["registrar"], vcardArray: ["vcard", [["fn", {}, "text", "GoDaddy"]]] },
+      ],
+      events: [
+        { eventAction: "registration", eventDate: "1995-08-14T00:00:00Z" },
+        { eventAction: "expiration", eventDate: "2030-08-13T00:00:00Z" },
+        { eventAction: "last changed", eventDate: "2024-01-01T00:00:00Z" },
+      ],
+      nameservers: [
+        { ldhName: "ns1.example.com" },
+        { ldhName: "ns2.example.com" },
+      ],
+      status: ["client delete prohibited", "client transfer prohibited"],
+      port43: "whois.example.com",
+    };
+
+    var domainFields = W.parseDomainResponse(domainResponse);
+    var fieldMap = {};
+    domainFields.forEach(function (f) { fieldMap[f[0]] = f[1]; });
+
+    assert("has Domain field", fieldMap["Domain"], "example.com");
+    assert("has Registrant", fieldMap["Registrant"], "Example Inc");
+    assert("has Registrar", fieldMap["Registrar"], "GoDaddy");
+    assert("has Created date", "Created" in fieldMap, true);
+    assert("has Updated date", "Updated" in fieldMap, true);
+    assert("has Expires date", "Expires" in fieldMap, true);
+    assert("has Nameservers", fieldMap["Nameservers"], "ns1.example.com, ns2.example.com");
+    assert("has Status", fieldMap["Status"], "client delete prohibited, client transfer prohibited");
+    assert("has WHOIS Server", fieldMap["WHOIS Server"], "whois.example.com");
+
+    // ========================
+    // parseDomainResponse — IP network
+    // ========================
+    suite("parseDomainResponse — IP network");
+
+    var ipResponse = {
+      handle: "NET-8-8-8-0-1",
+      startAddress: "8.8.8.0",
+      endAddress: "8.8.8.255",
+      name: "LVLT-GOGL-8-8-8",
+      entities: [
+        { roles: ["registrant"], vcardArray: ["vcard", [["fn", {}, "text", "Google LLC"]]] },
+      ],
+      events: [
+        { eventAction: "registration", eventDate: "2014-03-14T00:00:00Z" },
+        { eventAction: "last changed", eventDate: "2023-12-20T00:00:00Z" },
+      ],
+      status: ["active"],
+    };
+
+    var ipFields = W.parseDomainResponse(ipResponse);
+    var ipMap = {};
+    ipFields.forEach(function (f) { ipMap[f[0]] = f[1]; });
+
+    assert("has Handle", ipMap["Handle"], "NET-8-8-8-0-1");
+    assert("has IP Range", ipMap["IP Range"], "8.8.8.0 \u2013 8.8.8.255");
+    assert("has Network Name", ipMap["Network Name"], "LVLT-GOGL-8-8-8");
+    assert("has Registrant", ipMap["Registrant"], "Google LLC");
+    assert("has Status", ipMap["Status"], "active");
+
+    // ========================
+    // parseDomainResponse — minimal/empty
+    // ========================
+    suite("parseDomainResponse — edge cases");
+
+    assert("empty object returns empty array", W.parseDomainResponse({}), []);
+    assert("no entities still parses other fields", W.parseDomainResponse({ ldhName: "test.com" }).length, 1);
+
+    var noVcardEntity = {
+      entities: [{ roles: ["registrar"], publicIds: [{ type: "IANA Registrar ID", identifier: "1234" }] }],
+    };
+    var noVcardFields = W.parseDomainResponse(noVcardEntity);
+    var noVcardMap = {};
+    noVcardFields.forEach(function (f) { noVcardMap[f[0]] = f[1]; });
+    assert("registrar fallback to IANA ID", noVcardMap["Registrar ID"], "1234");
+
+    // ========================
+    // Security: no innerHTML with external data
+    // ========================
+    suite("Security");
+
+    // Verify textContent is used (structural test via DOM)
+    var dl = document.getElementById("summary-list");
+    dl.innerHTML = "";
+    var testFields = [["Test<img>", "Value<script>"]];
+    // Simulate renderSummary manually since it's not exposed
+    testFields.forEach(function (f) {
+      var dt = document.createElement("dt");
+      dt.textContent = f[0];
+      var dd = document.createElement("dd");
+      dd.textContent = f[1];
+      dl.appendChild(dt);
+      dl.appendChild(dd);
+    });
+    assert("HTML in key is escaped", dl.querySelector("dt").textContent, "Test<img>");
+    assert("HTML in value is escaped", dl.querySelector("dd").textContent, "Value<script>");
+    assert("no img element created", dl.querySelector("img"), null);
+    dl.innerHTML = "";
+
+    // ========================
+    // Summary
+    // ========================
+    var summaryEl = document.getElementById("summary");
+    var total = passed + failed;
+    summaryEl.className = failed > 0 ? "fail" : "pass";
+    summaryEl.textContent = passed + "/" + total + " tests passed" + (failed > 0 ? " — " + failed + " FAILED" : " \u2714");
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #fafafa;
+  --surface: #fff;
+  --border: #ddd;
+  --text: #1a1a1a;
+  --text-secondary: #555;
+  --accent: #0066cc;
+  --accent-hover: #0052a3;
+  --error-bg: #fef2f2;
+  --error-text: #b91c1c;
+  --radius: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111;
+    --surface: #1a1a1a;
+    --border: #333;
+    --text: #e5e5e5;
+    --text-secondary: #999;
+    --accent: #4da3ff;
+    --accent-hover: #7dbdff;
+    --error-bg: #2d1515;
+    --error-text: #f87171;
+  }
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+main {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 3rem 1rem;
+}
+
+h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+}
+
+/* Input */
+.input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+#query-input {
+  flex: 1;
+  padding: 0.6rem 0.8rem;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+
+#query-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
+}
+
+#lookup-btn {
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+#lookup-btn:hover {
+  background: var(--accent-hover);
+}
+
+#lookup-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rate-limit {
+  color: var(--error-text);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+/* Loading */
+#loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  color: var(--text-secondary);
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error */
+#error {
+  margin-top: 1.5rem;
+  padding: 0.8rem 1rem;
+  background: var(--error-bg);
+  color: var(--error-text);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+
+/* Results */
+#results {
+  margin-top: 1.5rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.card h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Summary */
+#summary-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem 1rem;
+}
+
+#summary-list dt {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+#summary-list dd {
+  word-break: break-all;
+}
+
+/* Raw JSON toggle */
+#raw-toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0;
+}
+
+#raw-toggle .toggle-icon {
+  font-size: 0.7rem;
+  transition: transform 0.15s;
+}
+
+#raw-toggle[aria-expanded="true"] .toggle-icon {
+  transform: rotate(90deg);
+}
+
+#raw-json {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: var(--bg);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  overflow-x: auto;
+  max-height: 500px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Utility */
+.hidden {
+  display: none !important;
+}
+
+@media (max-width: 500px) {
+  .input-group {
+    flex-direction: column;
+  }
+
+  #summary-list {
+    grid-template-columns: 1fr;
+  }
+
+  #summary-list dt {
+    margin-top: 0.5rem;
+  }
+}
