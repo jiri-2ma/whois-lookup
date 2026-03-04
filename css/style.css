@@ -6,6 +6,7 @@
   padding: 0;
 }
 
+/* Light theme (default) */
 :root {
   --bg: #fafafa;
   --surface: #fff;
@@ -19,8 +20,22 @@
   --radius: 6px;
 }
 
+/* Dark theme values */
+[data-theme="dark"] {
+  --bg: #111;
+  --surface: #1a1a1a;
+  --border: #333;
+  --text: #e5e5e5;
+  --text-secondary: #999;
+  --accent: #4da3ff;
+  --accent-hover: #7dbdff;
+  --error-bg: #2d1515;
+  --error-text: #f87171;
+}
+
+/* System preference when no explicit choice */
 @media (prefers-color-scheme: dark) {
-  :root {
+  [data-theme="system"] {
     --bg: #111;
     --surface: #1a1a1a;
     --border: #333;
@@ -47,10 +62,38 @@ main {
   padding: 3rem 1rem;
 }
 
+/* Top bar */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 h1 {
   font-size: 1.8rem;
   font-weight: 700;
   margin-bottom: 0.25rem;
+}
+
+#theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.1rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+#theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--text-secondary);
 }
 
 .subtitle {

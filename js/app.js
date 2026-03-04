@@ -20,6 +20,39 @@
   var rawToggle = document.getElementById("raw-toggle");
   var rawJson = document.getElementById("raw-json");
 
+  // --- Theme toggle ---
+  // Cycles: system → light → dark → system
+
+  var themeToggle = document.getElementById("theme-toggle");
+  var THEME_KEY = "whois-theme";
+  var THEME_ICONS = { system: "\u25D0", light: "\u2600", dark: "\u263E" };
+  var THEME_ORDER = ["system", "light", "dark"];
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    themeToggle.textContent = THEME_ICONS[theme];
+    themeToggle.title = "Theme: " + theme;
+  }
+
+  function getSavedTheme() {
+    try { return localStorage.getItem(THEME_KEY) || "system"; }
+    catch (e) { return "system"; }
+  }
+
+  function saveTheme(theme) {
+    try { localStorage.setItem(THEME_KEY, theme); }
+    catch (e) { /* ignore */ }
+  }
+
+  applyTheme(getSavedTheme());
+
+  themeToggle.addEventListener("click", function () {
+    var current = getSavedTheme();
+    var next = THEME_ORDER[(THEME_ORDER.indexOf(current) + 1) % THEME_ORDER.length];
+    saveTheme(next);
+    applyTheme(next);
+  });
+
   // --- Helpers ---
 
   function isIP(str) {
